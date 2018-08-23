@@ -1,5 +1,5 @@
 #include <PPMReader.h>
-#include <InterruptHandler.h>   <-- You may need this on some versions of Arduino
+//#include <InterruptHandler.h>   <-- You may need this on some versions of Arduino
 
 //////////////////////CONFIGURATION///////////////////////////////
 #define default_servo_value 1500  //set the default servo value
@@ -9,12 +9,13 @@
 #define outPin 5  //set PPM signal output pin on the arduino
 #define interruptPin 2 //set digital pin to listen PPM
 #define channelAmount 6 //set number of channels, 8 channels max
-#define debug false //set true if you want see output in serial port
-//////////////////////////////////////////////////////////////////
 
-//Chanels order recieving
-String chanelsInput = "AETR1234";
-String chanelsOutput = "TAER1234";
+//Chanels order recieving AETR1234
+//Chanels order transmitting TAER1234
+const unsigned int chanelsOutput[] = {2,0,1,3,4,5,6,7};
+
+const boolean debug = false; //set true if you want see output in serial port
+//////////////////////////////////////////////////////////////////
 
 unsigned int output[channelAmount];
 
@@ -42,18 +43,15 @@ void setup() {
 }
 
 void loop() {
-  // Print latest valid values from all channels
+  // Get latest valid values from all channels
   for (int channel = 1; channel <= channelAmount; ++channel) {
     unsigned long value = ppm.latestValidChannelValue(channel, 0);
-    char chName = chanelsInput.charAt(channel - 1);
-
-    int chOutIdx = chanelsOutput.indexOf(chName);
-
-    output[chOutIdx] = value;
+        
+    output[chanelsOutput[channel - 1]] = value;
     
     if(debug)
     {
-      Serial.print(String(chName) + " " + String(value) + " ");
+      Serial.print(String(value) + " ");
     }
   }
   if(debug)
