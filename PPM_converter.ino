@@ -1,8 +1,12 @@
-#include <PPMReader.h>
-#include <InterruptHandler.h>   <-- You may need this on some versions of Arduino
+//#include <PPMReader.h>
+//#include <InterruptHandler.h>   <-- You may need this on some versions of Arduino
 
 //////////////////////CONFIGURATION///////////////////////////////
 #define default_servo_value 1500  //set the default servo value
+#define min_servo_value 1000  //set the min servo value
+#define max_servo_value 2000  //set the max servo value
+
+#define PPM_FrGap 3000  //set the gap between PPM frames microseconds (1ms = 1000µs)
 #define PPM_FrLen 20500  //set the PPM frame length in microseconds (1ms = 1000µs)
 #define PPM_PulseLen 300  //set the pulse length
 #define onState 0  //set polarity of the pulses: 1 is positive, 0 is negative
@@ -19,24 +23,28 @@ const unsigned int chanelsOutput[] = {2,0,1,3,4,5,6,7};
 
 const boolean debug = false; //set true if you want see output in serial port
 //////////////////////////////////////////////////////////////////
-
+volatile unsigned int input[channelAmount];
 unsigned int output[channelAmount];
 
-PPMReader ppm(interruptPin, channelAmount);
+//PPMReader ppm(interruptPin, channelAmount);
 
 void setup() {
 
+  //set all channels in middle position
   for(int i = 0; i < channelAmount; i++)
   {
     output[i] = default_servo_value;
-    }
+  }
+
+  pinMode(interruptPin, INPUT_PULLUP);
+  pinMode(outPin, OUTPUT);
+
+  attachInterrupt(digitalPinToInterrupt(interruptPin), READER_ISR, FALLING);
   
   if(debug){
     Serial.begin(9600);
   }
   
-  pinMode(outPin, OUTPUT);
-
   digitalWrite(outPin, !onState);  //set the PPM signal pin to the default state (off)
 
   cli();
@@ -54,10 +62,10 @@ void setup() {
 void loop() {
     
   // Get latest valid values from all channels
-  for (int channel = 1; channel <= channelAmount; ++channel) {
-    unsigned long value = ppm.latestValidChannelValue(channel, default_servo_value);
+  for (int channel = 0; channel < channelAmount; ++channel) {
+    unsigned int value = input[channel];
 
-    output[chanelsOutput[channel - 1]] = value;
+    output[chanelsOutput[channel]] = value;
     
     if(debug)
     {
@@ -70,6 +78,36 @@ void loop() {
   }
 }
 
+READER_ISR()
+{
+  static byte cur_chan_numb;
+  static unsigned long microsAtLastPulse;
+  
+    // Remember the current micros() and calculate the time since the last pulseReceived()
+    unsigned long previousMicros = microsAtLastPulse;
+    microsAtLastPulse = micros();
+    unsigned int pulseTime = microsAtLastPulse - previousMicros;
+
+    if (pulseTime >= PPM_FrGap) {
+        /* If the time between pulses was long enough to be considered an end
+         * of a PPM frame, prepare to read channel values from the next pulses */
+        cur_chan_numb = 0;
+    }
+    else {
+        // Store times between pulses as channel values
+        if (cur_chan_numb < channelAmount) {
+            
+            if (pulseTime >= min_servo_value - 10 && time <= max_servo_value + 10) {
+                validValues[pulseCounter] = constrain(pulseTime, min_servo_value, max_servo_value);
+            }
+            else{
+              input[cur_chan_numb] = default_servo_value;
+              }
+        }
+        ++cur_chan_numb;
+    }
+}
+
 ISR(TIMER1_COMPA_vect){ 
   static boolean state = true;
   
@@ -80,7 +118,7 @@ ISR(TIMER1_COMPA_vect){
     digitalWrite(outPin, onState);
     OCR1A = PPM_PulseLen;
     state = false;
-    if(debug){
+    if(debug){  
       Serial.println();
     }
   }
