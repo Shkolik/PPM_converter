@@ -1,6 +1,3 @@
-//#include <PPMReader.h>
-//#include <InterruptHandler.h>   <-- You may need this on some versions of Arduino
-
 //////////////////////CONFIGURATION///////////////////////////////
 #define default_servo_value 1500  //set the default servo value
 #define min_servo_value 950  //set the min servo value
@@ -25,12 +22,14 @@ const byte channelAmount = 6; //set number of channels, 8 channels max
 //Chanels order transmitting TAER1234
 const unsigned int chanelsOutput[] = {2, 0, 1, 3, 4, 5, 6, 7};
 
-const boolean debug = false; //set true if you want see output in serial port
+const boolean debug = true; //set true if you want see output in serial port
 //////////////////////////////////////////////////////////////////
 volatile unsigned long input[channelAmount];
 volatile unsigned long output[channelAmount];
 
-//PPMReader ppm(interruptPin, channelAmount);
+
+unsigned long totalMicroseconds;
+volatile unsigned long overflowCount;
 
 void setup() {
 
@@ -43,53 +42,91 @@ void setup() {
 
   pinMode(interruptPin, INPUT_PULLUP);
   pinMode(outPin, OUTPUT);
-
-  attachInterrupt(digitalPinToInterrupt(interruptPin), reader_ISR, FALLING);
-
-  if (debug) {
-    Serial.begin(115200);
-  }
-
   digitalWrite(outPin, !onState);  //set the PPM signal pin to the default state (off)
 
-  cli();
-  TCCR1A = 0; // set entire TCCR1 register to 0
-  TCCR1B = 0;
+  if (debug) {
+    Serial.begin(9600);
+  }
 
-  OCR1A = 100;  // compare match register, change this
-  TCCR1B |= (1 << WGM12);  // turn on CTC mode
-  TCCR1B |= (1 << CS11);  // 8 prescaler: 0,5 microseconds at 16mhz, 1 microsecond at 8mhz (Atmega16L)
-  TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt on arduino
+  cli();
+  //setup int0 to listen ppm input
+  GICR |= (1 << INT0);   //Enable INT0
+  MCUCR |= (1 << ISC01); //Configure INT0 as falling edge
+
+  //setup timer2
+  //Setup Timer2 to fire every 250us
+  TCCR2 = 0; // set entire TCCR1 register to 0
+  TCNT2 = 0;
+
+  TCCR2 |= (1 << CS21);  // 8 prescaler: 0,5 microseconds at 16mhz, 1 microsecond at 8mhz (Atmega16L)
+  TIMSK |= (1 << TOIE2);
+
+  
+    //setup Timer1
+    TCCR1A = 0; // set entire TCCR1 register to 0
+    TCCR1B = 0;
+
+    OCR1A = 100;  // compare match register, change this
+    TCCR1B |= (1 << WGM12);  // turn on CTC mode
+    TCCR1B |= (1 << CS11);  // 8 prescaler: 0,5 microseconds at 16mhz, 1 microsecond at 8mhz (Atmega16L)
+    TIMSK |= (1 << OCIE1A); // enable timer compare interrupt on arduino
+  
   sei();
 }
 
-void loop() {
-
-  // Get latest valid values from all channels
-  for (byte channel = 0; channel < channelAmount; channel++) {
-    unsigned long value = input[chanelsOutput[channel]];
-
-    output[channel] = value;
-
-    if (debug)
-    {
-      Serial.print(String(channel + 1) + ": " + String(value) + " ");
-    }
+//get total count for Timer2
+unsigned long getMicros()
+{
+  uint8_t SREG_old = SREG; //back up the AVR Status Register;
+  noInterrupts(); //prepare for critical section of code
+  uint8_t tcnt2_save = TCNT2; //grab the counter value from Timer2
+  boolean flag_save = bitRead(TIFR, 6); //grab the timer2 overflow flag value;
+  if (flag_save) { //if the overflow flag is set
+    tcnt2_save = TCNT2; //update variable just saved since the overflow flag could have just tripped between previously saving the TCNT2 value and reading bit 6 of TIFR.
+    //If this is the case, TCNT2 might have just changed from 255 to 0, and so we need to grab the new value of TCNT2 to prevent an error of up
+    //to 255us in any time obtained using the T2 counter (ex: T2_micros). (Note: 255 counts /us = 255us)
+    overflowCount++;    //force the overflow count to increment
+    TIFR |= (1 << TOV2);//reset Timer2 overflow flag since we just manually incremented above; this prevents execution of Timer2's overflow ISR
   }
-  if (debug)
-  {
-    Serial.println();
-  }
+  totalMicroseconds = overflowCount * 256 + tcnt2_save; //get total Timer2 count
+  SREG = SREG_old; //re-enable interrupts if they were enabled before, or to leave them disabled if they were disabled before
+  return totalMicroseconds;
 }
 
-void reader_ISR()
+void loop() {
+  
+    // Get latest valid values from all channels
+    for (byte channel = 0; channel < channelAmount; channel++) {
+      unsigned long value = input[chanelsOutput[channel]];
+
+      output[channel] = constrain(value, min_servo_value, max_servo_value);
+
+      if (debug)
+      {
+        Serial.print(String(channel + 1) + ": " + String(value) + " ");
+      }
+    }
+    if (debug)
+    {
+      Serial.println();
+    }
+}
+
+
+
+ISR(TIMER2_OVF_vect) // TIMER2 overflow ISR
 {
+  overflowCount++;
+};
+
+ISR (INT0_vect)          //External int0 ISR
+{  
   static byte channel;
   static unsigned long microsAtLastPulse = 0;
 
   // Remember the current micros() and calculate the time since the last pulseReceived()
   unsigned long previousMicros = microsAtLastPulse;
-  microsAtLastPulse = micros();
+  microsAtLastPulse = getMicros();
   unsigned long pulseTime = microsAtLastPulse - previousMicros;
 
   //End of frame - start new capture session
@@ -98,19 +135,15 @@ void reader_ISR()
   }
   else {
     // Store times between pulses as channel values
-    if (channel < channelAmount) {
-      if (pulseTime >= min_servo_value - 10 && pulseTime <= max_servo_value + 10) {
-        input[channel] = constrain(pulseTime, min_servo_value, max_servo_value);
-      }
-      else {
-        input[channel] = default_servo_value;
-      }
-      ++channel;
-    }
+    //if (pulseTime >= min_servo_value - 10 && pulseTime <= max_servo_value + 10) {
+    input[channel] = pulseTime;
+    //}
+    ++channel;
   }
 }
 
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER1_COMPA_vect) //TIMER1 compare ISR
+{
   static boolean state = true;
   static byte channel;
   static unsigned long calc_rest;
