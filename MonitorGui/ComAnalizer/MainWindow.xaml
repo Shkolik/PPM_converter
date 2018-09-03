@@ -1,0 +1,39 @@
+﻿<Window x:Class="ComAnalizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ComAnalizer"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <DockPanel LastChildFill="True">
+		<GroupBox Header="Settings" x:Name="SettingsGB" DockPanel.Dock="Top" HorizontalAlignment="Center">			
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="250"/>
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="25"/>
+					<RowDefinition Height="25"/>
+					<RowDefinition Height="25"/>
+					<RowDefinition Height="25"/>
+					<RowDefinition Height="25"/>
+					</Grid.RowDefinitions>
+
+				<TextBlock Text="Port Name:" Grid.Column="0" Grid.Row="0"/>
+				<TextBlock Text="Bound Rate:" Grid.Column="0" Grid.Row="1"/>
+				<TextBlock Text="Data Bits:" Grid.Column="0" Grid.Row="2"/>
+				<TextBlock Text="Parity:" Grid.Column="0" Grid.Row="3"/>
+				<TextBlock Text="Stop Bits:" Grid.Column="0" Grid.Row="4"/>
+
+				<ComboBox ItemsSource="{Binding PortNameCollection}" SelectedItem="{Binding PortName}" Grid.Column="1" Grid.Row="0"/>
+				<ComboBox ItemsSource="{Binding BaudRateCollection}" SelectedItem="{Binding BaudRate}" Grid.Column="1" Grid.Row="1"/>
+				<ComboBox ItemsSource="{Binding DataBitsCollection}" SelectedItem="{Binding DataBits}" Grid.Column="1" Grid.Row="2"/>
+				<ComboBox x:Name="ParityCB" SelectedItem="{Binding Parity}" Grid.Column="1" Grid.Row="3"/>
+				<ComboBox x:Name="StopBitsCB" SelectedItem="{Binding StopBits}" Grid.Column="1" Grid.Row="4"/>
+			</Grid>
+		</GroupBox>
+		<ListBox x:Name="DataTB"/>
+	</DockPanel>
+</Window>
