@@ -3,6 +3,7 @@ volatile unsigned long prevTimeStamp;
 volatile unsigned long currentTimeStamp;
 volatile unsigned int channel;
 volatile unsigned long input[6];
+ 
 
 ISR (TIMER1_OVF_vect)
 {
@@ -15,10 +16,14 @@ ISR (TIMER1_CAPT_vect)
   timer1CounterValue = ICR1;  // see datasheet, page 117 (accessing 16-bit registers)
   unsigned long overflowCopy = overflowCount;
 
-  // if just missed an overflow
-  if ((TIFR1 & bit (TOV1)) && timer1CounterValue < 0x7FFF)
-    overflowCopy++;
 
+  // if just missed an overflow
+  // 0x7FFF is magic - have to think about this.
+  if ((TIFR1 & bit (TOV1)) && timer1CounterValue < 0x7FFF)
+  {
+    overflowCopy++;
+  }
+  
   currentTimeStamp = (overflowCopy << 16) + timer1CounterValue;
 
   unsigned long value = currentTimeStamp - prevTimeStamp;
@@ -39,6 +44,9 @@ void setup() {
   Serial.begin(115200);
 
   noInterrupts ();  // protected code
+
+  TCCR0A = 0;
+  TCCR0B = 0;
   // reset Timer 1
   TCCR1A = 0;
   TCCR1B = 0;
