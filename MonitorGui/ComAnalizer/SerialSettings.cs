@@ -103,7 +103,11 @@ namespace ComAnalizer
 		public string[] PortNameCollection
 		{
 			get { return _portNameCollection; }
-			set { _portNameCollection = value; }
+			set
+			{
+				_portNameCollection = value;
+				SendPropertyChangedEvent("PortNameCollection");
+			}
 		}
 
 		/// <summary>
