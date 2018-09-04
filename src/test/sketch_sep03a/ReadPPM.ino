@@ -14,8 +14,8 @@ void setupReader()
   TCNT1 = 0;                              // Counter to zero
   
   #ifdef __AVR_ATmega16__
-    TIFR = bit (ICF1) | bit (TOV1);       // clear flags so we don't get a bogus interrupt
-    TIMSK = bit (TOIE1) | bit (TICIE1);   // interrupt on Timer 1 overflow and input capture
+    //TIFR = bit (ICF1) | bit (TOV1);       // clear flags so we don't get a bogus interrupt
+    TIMSK |= bit (TOIE1) | bit (TICIE1);   // interrupt on Timer 1 overflow and input capture
   #else    
     TIFR1 = bit (ICF1) | bit (TOV1);      // clear flags so we don't get a bogus interrupt    
     TIMSK1 = bit (TOIE1) | bit (ICIE1);   // interrupt on Timer 1 overflow and input capture
@@ -33,7 +33,7 @@ ISR (TIMER1_CAPT_vect)
 {
   static unsigned long prevTimeStamp;
   static unsigned long currentTimeStamp;
-  static unsigned int channel;
+  static unsigned int channel = 0;
 
   unsigned int timer1CounterValue = ICR1;     // save timestamp
   
@@ -48,17 +48,17 @@ ISR (TIMER1_CAPT_vect)
 
   currentTimeStamp = (overflowCopy << 16) + timer1CounterValue; // low 16 bits - counter value, high 16 bits - overflows
 
-  unsigned long value = currentTimeStamp - prevTimeStamp;       // time between 2 pulses
-  
+  unsigned long value = currentTimeStamp - prevTimeStamp;       // time between 2 pulses  
   if (channel >= channelAmount || value >= PPM_FrGap)           // if we already read all the channels or we expecting more than exists, do resync
   {
     channel = 0;
   }
   else                                                          // if value is valid channel value, then save it and start waiting next channel
-  {
+  {    
     input[channel] = value;
     channel++;
   }
 
   prevTimeStamp = currentTimeStamp;                             // save last pulse timestamp
 }
+
