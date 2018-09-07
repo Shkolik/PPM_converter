@@ -4,6 +4,8 @@
   #define ticksInMicrosecond  1                          //tick count in 1us with 1/8 prescaller
 #endif
 
+#define writerCorrection (4 * ticksInMicrosecond)        // each ppmwriter IRS takes about 4µs
+
 #define default_servo_value (1500 * ticksInMicrosecond)  //set the default servo value
 #define min_servo_value (950 * ticksInMicrosecond)       //set the min servo value
 #define max_servo_value (2050 * ticksInMicrosecond)      //set the max servo value
@@ -12,7 +14,11 @@
 #define PPM_FrLen (20500 * ticksInMicrosecond)           //set the PPM frame length in microseconds (1ms = 1000Вµs)
 #define PPM_PulseLen (300 * ticksInMicrosecond)          //set the pulse length
 #define onState 0                                        //set polarity of the pulses: 1 is positive, 0 is negative
-#define OCR2A_full 249                                   //Max value for OCR2A register
+
+#define OCR2_full 249                                   //Max value for OCR2 register
+#define OCR2_CorrectedFull (OCR2_full - writerCorrection)                                   //Max value for OCR2 register
+#define OCR2_MaxCount (OCR2_full + 1)                     //Max value for OCR2 register
+#define OCR2_CorrectedCount (OCR2_MaxCount - writerCorrection)                         //Max value for OCR2 register
 
 // use PORTB 1-5 as output
 // arduino pins 9-13
@@ -26,7 +32,6 @@
 #define OUT_PORT PORTB
 
 const bool debug = false;
-const bool debugWrite = false;
 
 const byte channelAmount = 6;                            //set number of channels, 8 channels max
 
@@ -34,14 +39,13 @@ const byte channelAmount = 6;                            //set number of channel
 //Chanels order transmitting TAER1234
 const unsigned int chanelsOutput[] = {2, 0, 1, 3, 4, 5, 6, 7};
 
-volatile unsigned long overflowCount;
+volatile unsigned int input[channelAmount];             //channels readed
+volatile unsigned int output[channelAmount];            //channels to translate
 
-volatile unsigned long input[channelAmount];             //channels readed
-volatile unsigned long output[channelAmount];            //channels to translate
-
+volatile unsigned long overflowCount = 0;
 void setup()
 {
-  if (debug || debugWrite)
+  if (debug)
   {
     Serial.begin(9600);
   }
@@ -86,4 +90,3 @@ void loop()
     Serial.println();
   }
 }
-
