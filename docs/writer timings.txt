@@ -1,0 +1,46 @@
+--- BRANCH 1 ---
+channel: 1
+4.60 mks 
+
+
+--- BRANCH 3 ---
+channel: 4
+4.00 mks
+
+
+--- BRANCH 4 ---
+channel: 5
+4.00 mks
+
+
+--- BRANCH 5 ---
+channel: 6
+4.75 mks
+
+
+--- BRANCH 7 ---
+channel: 0
+3.94 mks
+
+
+--- BRANCH 8 ---
+channel: 6
+4.13 mks
+
+
+--- BRANCH 9 ---
+channel: 0
+5.25 mks
+
+--- BRANCH 11 ---
+channel: 
+4.00 mks
+
+
+--- BRANCH 12 ---
+channel: 0
+4.06 mks
+
+
+
+
