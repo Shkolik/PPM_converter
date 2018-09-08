@@ -5,8 +5,8 @@ void setupWriter()
 #ifdef __AVR_ATmega16__
   TCCR2 = 0;                        // set entire TCCR2 register to 0
   TCNT2 = 0;                        // reset timer
-  TCCR2 = bit (WGM21) | bit (CS21); // CTC mode and 8 prescaler: 0,5 microseconds at 16mhz, 1 microsecond at 8mhz (Atmega16L)
-  OCR2 = OCR2A_full;                // count to 250 (zero-relative)
+  TCCR2 = bit (WGM21) | bit (CS21);//| bit (CS20)| bit (CS22); // CTC mode and 8 prescaler: 0,5 microseconds at 16mhz, 1 microsecond at 8mhz (Atmega16L)
+  OCR2 = OCR2_full;                // count to 250 (zero-relative)
   TIMSK |= bit (OCIE2);             // enable compare interrupt
 #else
   TCCR2A = 0;                       // set entire TCCR2 register to 0
@@ -25,21 +25,22 @@ ISR(TIMER2_COMP_vect)
 #else
 ISR(TIMER2_COMPA_vect)
 #endif
-{
-  static unsigned int OCR2_next = OCR2_CorrectedFull;
+{  
+  static unsigned int OCR2_next = OCR2_full;
   static boolean state = true;
 
   static byte channel = 0;
-  unsigned int pulseRest = 0;
-  unsigned int frameRest = 0;
+  static unsigned int pulseRest = 0;
+  static unsigned int frameRest = 0;
 
   TCNT2 = 0;                                      // reset counter
 
   if (state)                                                // start pulse
   {
     if (pulseRest == 0)                                // if pulseRest == 0, then it's start of new pulse or it's last iteration in that pulse
-    {
+    {      
       // write pulse polarity
+            
       if (onState)
         OUT_PORT |= outPinBitMask;
       else
@@ -47,17 +48,16 @@ ISR(TIMER2_COMPA_vect)
 
       pulseRest = PPM_PulseLen;   // count interrupts
 
-      //branch = 1;
-      OCR2_next = OCR2_CorrectedFull;                          // next interrupt after 250 ticks
+      OCR2_next = OCR2_CorrectedFull;                          // next interrupt after 250 - correction ticks
     }
     else if ( pulseRest > OCR2_MaxCount)                                                // in the middle wait and interrupt every 250 ticks
     {
-      //branch = 4;
+      overflowCount++;
+      
       OCR2_next = OCR2_CorrectedFull;
     }
     else                                                  // last interrupt in this pulse. Change state after this
-    {
-      //branch = 3;
+    {      
       OCR2_next = pulseRest;
       state = false;
     }
@@ -67,26 +67,22 @@ ISR(TIMER2_COMPA_vect)
     if (channel >= channelAmount)                           // all channels sended. calculate syncro gap
     {
       if (pulseRest == 0)
-      {
-
+      {        
         if (!onState)
           OUT_PORT |= outPinBitMask;
         else
           OUT_PORT &= ~outPinBitMask;
 
         pulseRest = frameRest;
-
-        //branch = 5;
+        
         OCR2_next = OCR2_CorrectedFull;                          // next interrupt after 250 ticks
       }
-      else if (pulseRest > 250)
-      {
-        //branch = 8;
+      else if (pulseRest > OCR2_MaxCount)
+      {        
         OCR2_next = OCR2_CorrectedFull;
       }
       else                                                  // last interrupt in frame
-      {
-        //branch = 7;
+      {        
         OCR2_next = pulseRest;
         state = true;
         channel = 0;
@@ -102,18 +98,15 @@ ISR(TIMER2_COMPA_vect)
           OUT_PORT &= ~outPinBitMask;
 
         pulseRest = output[channel];// - PPM_PulseLen;
-
-        //branch = 9;
+        
         OCR2_next = OCR2_CorrectedFull;                          // next interrupt after 250 ticks
       }
       else if (pulseRest > OCR2_MaxCount)
-      {
-        //branch = 12;
+      {        
         OCR2_next = OCR2_CorrectedFull;
       }
       else                                                    // last interrupt in channel
-      {
-        //branch = 11;
+      {        
         OCR2_next = pulseRest;
         channel++;
         state = true;
@@ -123,7 +116,7 @@ ISR(TIMER2_COMPA_vect)
 
   if (pulseRest > OCR2_MaxCount)                         // decrement pulseRest every interrupt
   {
-    pulseRest -= OCR2_MaxCount;
+    pulseRest -= OCR2_MaxCount;    
   }
   else
   {

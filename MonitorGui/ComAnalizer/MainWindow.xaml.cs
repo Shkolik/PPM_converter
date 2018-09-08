@@ -65,11 +65,15 @@ namespace ComAnalizer
 			if (started)
 			{
 				_spManager.StopListening();
+				MinDataTB.Text = GetMins(GetIntValues(), 6);
+				MaxDataTB.Text = GetMax(GetIntValues(), 6);
 				started = false;
 			}
 			else
 			{
 				_spManager.StartListening();
+				MinDataTB.Text = "";
+				MaxDataTB.Text = "";
 				started = true;
 			}
 
@@ -96,24 +100,85 @@ namespace ComAnalizer
 			// Show save file dialog box
 			var result = dlg.ShowDialog();
 
+			
+
 			// Process save file dialog box results
 			if (result == true)
-			{
-				var newLines = new List<string>();
-				var lines = DataTB.Text.Split(new[] { '\n' });
-				foreach (var line in lines)
-				{
-					var values = line.Split(new[] { ' ' });
-					var newLine = "";
-					foreach (var value in values)
-					{
-						newLine += value + ", ";
-					}
-					newLines.Add(newLine.Trim(new[] { ' ', ',', '\r', '\n' }));					
-				}
+			{				
 				// Save document
-				File.WriteAllLines(dlg.FileName, newLines);
+				File.WriteAllLines(dlg.FileName, GetFileData());
 			}
+		}
+
+		private List<string> GetFileData()
+		{
+			var newLines = new List<string>();
+			var lines = DataTB.Text.Split(new[] { '\n' });
+			foreach (var line in lines)
+			{
+				var values = line.Split(new[] { ' ' });
+				var newLine = "";
+				foreach (var value in values)
+				{
+					newLine += value + ", ";
+				}
+				newLines.Add(newLine.Trim(new[] { ' ', ',', '\r', '\n' }));
+			}
+
+			return newLines;
+		}
+		private string GetMins(List<List<int>> values, int columns)
+		{
+			var res = "";
+			for (var i = 0; i < columns; i++)
+			{
+				try
+				{
+					res += values.Where(v => v.Count >= columns &&  v[i] > 999).Min(v => v[i]) + " ";
+				}
+				catch (Exception ex)
+				{
+				}
+
+			}
+			return res;
+		}
+
+		private string GetMax(List<List<int>> values, int columns)
+		{
+			var res = "";
+			for (var i = 0; i < columns; i++)
+			{
+				try
+				{
+					res += values.Where(v => v.Count >= columns).Max(v => v[i]) + " ";
+				}
+				catch (Exception ex)
+				{
+				}
+			}
+			return res;
+		}
+
+		private List<List<int>> GetIntValues()
+		{
+			var res = new List<List<int>>();
+
+			var lines = DataTB.Text.Split(new[] { '\n' });
+			foreach (var line in lines)
+			{
+				var values = line.Split(new[] { ' ' });
+				var intValues = new List<int>();
+				foreach (var value in values)
+				{
+					if (int.TryParse(value, out int intVal))
+						intValues.Add(intVal);
+					else
+						intValues.Add(0);
+				}
+				res.Add(intValues);
+			}
+			return res;
 		}
 	}
 }

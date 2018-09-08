@@ -43,6 +43,9 @@
 			<Button Click="Clear_Click" Content="Clear" Margin="10,5" HorizontalAlignment="Right"/>
 			<Button Click="Save_Click" Content="Save to file" Margin="10,5" HorizontalAlignment="Right"/>			
 		</DockPanel>
-		<TextBox x:Name="DataTB" VerticalScrollBarVisibility="Visible" Margin="10"/>
+		<TextBox  DockPanel.Dock="Bottom" x:Name="MaxDataTB" Margin="10,0"/>
+		<TextBox  DockPanel.Dock="Bottom" x:Name="MinDataTB" Margin="10,0"/>
+		
+		<TextBox x:Name="DataTB" VerticalScrollBarVisibility="Visible" Margin="10"/>		
 	</DockPanel>
 </Window>

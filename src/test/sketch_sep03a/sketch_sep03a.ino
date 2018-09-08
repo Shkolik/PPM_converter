@@ -1,7 +1,7 @@
 #if F_CPU == 16000000L
-  #define ticksInMicrosecond  2                          //tick count in 1us with 1/8 prescaller
+#define ticksInMicrosecond  2                          //tick count in 1us with 1/8 prescaller
 #else
-  #define ticksInMicrosecond  1                          //tick count in 1us with 1/8 prescaller
+#define ticksInMicrosecond  1                          //tick count in 1us with 1/8 prescaller
 #endif
 
 #define writerCorrection (4 * ticksInMicrosecond)        // each ppmwriter IRS takes about 4µs
@@ -31,7 +31,7 @@
 #define outPinBitMask digitalPinToBitMask(outPin)
 #define OUT_PORT PORTB
 
-const bool debug = false;
+const bool debug = true;
 
 const byte channelAmount = 6;                            //set number of channels, 8 channels max
 
@@ -39,7 +39,7 @@ const byte channelAmount = 6;                            //set number of channel
 //Chanels order transmitting TAER1234
 const unsigned int chanelsOutput[] = {2, 0, 1, 3, 4, 5, 6, 7};
 
-volatile unsigned int input[channelAmount];             //channels readed
+volatile unsigned int input[channelAmount + 1];             //channels readed
 volatile unsigned int output[channelAmount];            //channels to translate
 
 volatile unsigned long overflowCount = 0;
@@ -65,24 +65,32 @@ void setup()
   TIMSK0 = 0;
 #endif
 
+  for (byte i = 0; i < channelAmount; i++)
+  {
+    input[i] = default_servo_value;
+    output[i] = default_servo_value;
+  }
+  
   setupReader();                                        // setup PPM reader timers
 
   setupWriter();                                        // setup PPM writer timers
 
-  sei ();                                               // start interrupts handling  
+  sei ();                                               // start interrupts handling
 }
 
+byte test = 0;
 void loop()
-{
+{  
   // Get latest valid values from all channels
   for (byte channel = 0; channel < channelAmount; channel++)
   {
-    unsigned long value = input[chanelsOutput[channel]];
-    output[channel] = constrain(value, min_servo_value, max_servo_value);
+    //unsigned int value = input[chanelsOutput[channel]] - PPM_PulseLen;
+    unsigned int value = input[channel] - PPM_PulseLen;
+    output[channel] = constrain(value, min_servo_value - PPM_PulseLen, max_servo_value - PPM_PulseLen);
 
     if (debug)
     {
-      Serial.print(String(value) + " ");
+      Serial.print(String(value + PPM_PulseLen) + " ");
     }
   }
   if (debug)
