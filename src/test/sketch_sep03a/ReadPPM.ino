@@ -10,7 +10,7 @@ void setupReader()
 
   TCCR1A = 0;                             // set entire TCCR1 register to 0
   TCCR1B = 0;  
-  TCCR1B = bit (CS11) | bit (ICES1);      // 8 prescaler plus Input Capture Edge Select (rising on D8)
+  TCCR1B = bit (CS10) | bit (ICES1);      // 8 prescaler plus Input Capture Edge Select (rising on D8)
   TCNT1 = 0;                              // Counter to zero
   
   #ifdef __AVR_ATmega16__

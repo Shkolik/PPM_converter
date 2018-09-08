@@ -1,7 +1,7 @@
 #if F_CPU == 16000000L
-  #define ticksInMicrosecond  2                          //tick count in 1us with 1/8 prescaller
+  #define ticksInMicrosecond  16//2                          //tick count in 1us with 1/8 prescaller
 #else
-  #define ticksInMicrosecond  1                          //tick count in 1us with 1/8 prescaller
+  #define ticksInMicrosecond  8//1                          //tick count in 1us with 1/8 prescaller
 #endif
 
 #define default_servo_value (1500 * ticksInMicrosecond)  //set the default servo value
@@ -25,7 +25,7 @@
 #define outPinBitMask digitalPinToBitMask(outPin)
 #define OUT_PORT PORTB
 
-const bool debug = false;
+const bool debug = true;
 const bool debugWrite = false;
 
 const byte channelAmount = 6;                            //set number of channels, 8 channels max
@@ -74,7 +74,7 @@ void loop()
   for (byte channel = 0; channel < channelAmount; channel++)
   {
     unsigned long value = input[chanelsOutput[channel]];
-    output[channel] = constrain(value, min_servo_value, max_servo_value);
+    //output[channel] = constrain(value, min_servo_value, max_servo_value);
 
     if (debug)
     {
