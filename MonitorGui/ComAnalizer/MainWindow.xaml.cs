@@ -78,7 +78,36 @@ namespace ComAnalizer
 			}
 
 		}
+				
+		private void Self_Click(object sender, RoutedEventArgs e)
+		{
+			if (started)
+			{
+				_spManager.StopListening();
 
+				var values = GetIntValues();
+				var flatList = new List<int>();
+				foreach (var v in values)
+				{
+					flatList.AddRange(v);
+				}
+
+				DataTB.Text = DoMath(flatList);
+
+				MinDataTB.Text = GetMins(GetIntValues(), 6);
+				MaxDataTB.Text = GetMax(GetIntValues(), 6);
+
+				started = false;
+			}
+			else
+			{
+				_spManager.StartListening();
+				MinDataTB.Text = "";
+				MaxDataTB.Text = "";
+				started = true;
+			}
+
+		}
 
 		private void Clear_Click(object sender, RoutedEventArgs e)
 		{
@@ -108,6 +137,50 @@ namespace ComAnalizer
 				// Save document
 				File.WriteAllLines(dlg.FileName, GetFileData());
 			}
+		}
+
+		private string DoMath(List<int> values)
+		{
+			var res = "";
+			var lines = new List<string>();
+
+			var i = 1;
+			if (!int.TryParse(_FrameTb.Text, out int frGap))
+				return "";
+			var line = "";
+
+			foreach (var v in values)
+			{
+				var chValue = 0;
+				if (i < values.Count)
+				{
+					if (v >= values[i])
+					{
+						
+						chValue = (ushort.MaxValue - v) + values[i] + 1;
+					}
+					else
+					{
+						chValue = values[i] - v;
+					}
+					line += chValue + " ";
+
+					if (chValue >= frGap || line.TrimEnd().Split(new[] { ' '}).Length == 7)
+					{
+						lines.Add(line);
+						line = "";
+					}
+				}
+				else
+					break;
+				i++;
+			}
+
+			foreach(var ln in lines)
+			{
+				res += ln + '\n';
+			}
+			return res;
 		}
 
 		private List<string> GetFileData()
