@@ -65,16 +65,49 @@ namespace ComAnalizer
 			if (started)
 			{
 				_spManager.StopListening();
+				MinDataTB.Text = GetMins(GetIntValues(), 6);
+				MaxDataTB.Text = GetMax(GetIntValues(), 6);
 				started = false;
 			}
 			else
 			{
 				_spManager.StartListening();
+				MinDataTB.Text = "";
+				MaxDataTB.Text = "";
 				started = true;
 			}
 
 		}
+				
+		private void Self_Click(object sender, RoutedEventArgs e)
+		{
+			if (started)
+			{
+				_spManager.StopListening();
 
+				var values = GetIntValues();
+				var flatList = new List<int>();
+				foreach (var v in values)
+				{
+					flatList.AddRange(v);
+				}
+
+				DataTB.Text = DoMath(flatList);
+
+				MinDataTB.Text = GetMins(GetIntValues(), 6);
+				MaxDataTB.Text = GetMax(GetIntValues(), 6);
+
+				started = false;
+			}
+			else
+			{
+				_spManager.StartListening();
+				MinDataTB.Text = "";
+				MaxDataTB.Text = "";
+				started = true;
+			}
+
+		}
 
 		private void Clear_Click(object sender, RoutedEventArgs e)
 		{
@@ -96,24 +129,129 @@ namespace ComAnalizer
 			// Show save file dialog box
 			var result = dlg.ShowDialog();
 
+			
+
 			// Process save file dialog box results
 			if (result == true)
-			{
-				var newLines = new List<string>();
-				var lines = DataTB.Text.Split(new[] { '\n' });
-				foreach (var line in lines)
-				{
-					var values = line.Split(new[] { ' ' });
-					var newLine = "";
-					foreach (var value in values)
-					{
-						newLine += value + ", ";
-					}
-					newLines.Add(newLine.Trim(new[] { ' ', ',', '\r', '\n' }));					
-				}
+			{				
 				// Save document
-				File.WriteAllLines(dlg.FileName, newLines);
+				File.WriteAllLines(dlg.FileName, GetFileData());
 			}
+		}
+
+		private string DoMath(List<int> values)
+		{
+			var res = "";
+			var lines = new List<string>();
+
+			var i = 1;
+			if (!int.TryParse(_FrameTb.Text, out int frGap))
+				return "";
+			var line = "";
+
+			foreach (var v in values)
+			{
+				var chValue = 0;
+				if (i < values.Count)
+				{
+					if (v >= values[i])
+					{
+						
+						chValue = (ushort.MaxValue - v) + values[i] + 1;
+					}
+					else
+					{
+						chValue = values[i] - v;
+					}
+					line += chValue + " ";
+
+					if (chValue >= frGap || line.TrimEnd().Split(new[] { ' '}).Length == 7)
+					{
+						lines.Add(line);
+						line = "";
+					}
+				}
+				else
+					break;
+				i++;
+			}
+
+			foreach(var ln in lines)
+			{
+				res += ln + '\n';
+			}
+			return res;
+		}
+
+		private List<string> GetFileData()
+		{
+			var newLines = new List<string>();
+			var lines = DataTB.Text.Split(new[] { '\n' });
+			foreach (var line in lines)
+			{
+				var values = line.Split(new[] { ' ' });
+				var newLine = "";
+				foreach (var value in values)
+				{
+					newLine += value + ", ";
+				}
+				newLines.Add(newLine.Trim(new[] { ' ', ',', '\r', '\n' }));
+			}
+
+			return newLines;
+		}
+		private string GetMins(List<List<int>> values, int columns)
+		{
+			var res = "";
+			for (var i = 0; i < columns; i++)
+			{
+				try
+				{
+					res += values.Where(v => v.Count >= columns &&  v[i] > 999).Min(v => v[i]) + " ";
+				}
+				catch (Exception ex)
+				{
+				}
+
+			}
+			return res;
+		}
+
+		private string GetMax(List<List<int>> values, int columns)
+		{
+			var res = "";
+			for (var i = 0; i < columns; i++)
+			{
+				try
+				{
+					res += values.Where(v => v.Count >= columns).Max(v => v[i]) + " ";
+				}
+				catch (Exception ex)
+				{
+				}
+			}
+			return res;
+		}
+
+		private List<List<int>> GetIntValues()
+		{
+			var res = new List<List<int>>();
+
+			var lines = DataTB.Text.Split(new[] { '\n' });
+			foreach (var line in lines)
+			{
+				var values = line.Split(new[] { ' ' });
+				var intValues = new List<int>();
+				foreach (var value in values)
+				{
+					if (int.TryParse(value, out int intVal))
+						intValues.Add(intVal);
+					else
+						intValues.Add(0);
+				}
+				res.Add(intValues);
+			}
+			return res;
 		}
 	}
 }

@@ -12,7 +12,7 @@ namespace ComAnalizer
 		public event PropertyChangedEventHandler PropertyChanged;
 		string _portName = "";
 		string[] _portNameCollection;
-		int _baudRate = 4800;
+		int _baudRate = 9600;
 		BindingList<int> _baudRateCollection = new BindingList<int>();
 		Parity _parity = Parity.None;
 		int _dataBits = 8;
@@ -194,6 +194,8 @@ namespace ComAnalizer
 				_baudRateCollection.Add(115200);
 			if ((possibleBaudRates & BAUD_128K) > 0)
 				_baudRateCollection.Add(128000);
+
+			BaudRate = 9600;
 
 			SendPropertyChangedEvent("BaudRateCollection");
 		}
